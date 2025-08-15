@@ -1,1 +1,4 @@
-[![Deploy src/classes](https://img.shields.io/badge/Deploy-Classes-blue)](https://github.com/VerticAU/MaicaClientCare-TestDataFactory)
+<a href="https://githubsfdeploy.herokuapp.com">
+  <img alt="Deploy to Salesforce"
+       src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
+</a>
