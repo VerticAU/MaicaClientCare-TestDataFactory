@@ -1,20 +1,21 @@
 public with sharing class TestDataFactory {
 
     private static final Map<Integer, Contact> CONTACTS = new Map<Integer, Contact>{
-        0 => new Contact(FirstName = 'Luca', LastName = 'Milne', Email = 'luca.milne@mailinator.com', Birthdate = Date.newInstance(1990, 1, 1)),
-        1 => new Contact(FirstName = 'John', LastName = 'Doe', Email = 'john.doe@mailinator.com', Birthdate = Date.newInstance(1991, 2, 2)),
-        2 => new Contact(FirstName = 'Lyanna', LastName = 'Dyer', Email = 'lyanna.dyer@mailinator.com', Birthdate = Date.newInstance(1992, 3, 3)),
-        3 => new Contact(FirstName = 'Jagger', LastName = 'Carlson', Email = 'jagger@mailinator.com', Birthdate = Date.newInstance(1993, 4, 4)),
-        4 => new Contact(FirstName = 'Kali', LastName = 'Larsen', Email = 'laki.larsen@mailinator.com', Birthdate = Date.newInstance(1994, 5, 5)),
-        5 => new Contact(FirstName = 'Nicolas', LastName = 'Lang', Email = 'nicolas.lang@mailinator.com', Birthdate = Date.newInstance(1995, 6, 6)),
-        6 => new Contact(FirstName = 'Mario', LastName = 'Combs', Email = 'mario.combs@mailinator.com', Birthdate = Date.newInstance(1996, 7, 7)),
-        7 => new Contact(FirstName = 'Mark', LastName = 'May', Email = 'mark.may@mailinator.com', Birthdate = Date.newInstance(1997, 8, 8)),
-        8 => new Contact(FirstName = 'Adriana', LastName = 'White', Email = 'adriana.whie@mailinator.com', Birthdate = Date.newInstance(1998, 9, 9)),
-        9 => new Contact(FirstName = 'Remy', LastName = 'Becker', Email = 'adriana.whie@mailinator.com', Birthdate = Date.newInstance(1999, 10, 10))
+        0 => new Contact(FirstName = 'Luca', LastName = 'Milne', Email = 'luca.milne' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1990, 1, 1)),
+        1 => new Contact(FirstName = 'John', LastName = 'Doe', Email = 'john.doe' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1991, 2, 2)),
+        2 => new Contact(FirstName = 'Lyanna', LastName = 'Dyer', Email = 'lyanna.dyer' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1992, 3, 3)),
+        3 => new Contact(FirstName = 'Jagger', LastName = 'Carlson', Email = 'jagger' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1993, 4, 4)),
+        4 => new Contact(FirstName = 'Kali', LastName = 'Larsen', Email = 'laki.larsen' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1994, 5, 5)),
+        5 => new Contact(FirstName = 'Nicolas', LastName = 'Lang', Email = 'nicolas.lang' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1995, 6, 6)),
+        6 => new Contact(FirstName = 'Mario', LastName = 'Combs', Email = 'mario.combs' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1996, 7, 7)),
+        7 => new Contact(FirstName = 'Mark', LastName = 'May', Email = 'mark.may' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1997, 8, 8)),
+        8 => new Contact(FirstName = 'Adriana', LastName = 'White', Email = 'adriana.white' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1998, 9, 9)),
+        9 => new Contact(FirstName = 'Remy', LastName = 'Becker', Email = 'remy.becker' + System.currentTimeMillis() + '@mailinator.com', Birthdate = Date.newInstance(1999, 10, 10))
     };
 
     private Integer contactScope = 1;
     private Integer appointmentScope = 3;
+    private Integer deliveryActivityScope = 2;
 
     public TestDataFactory() {
     }
@@ -26,6 +27,12 @@ public with sharing class TestDataFactory {
     public TestDataFactory(Integer contactScope, Integer appointmentScope) {
         this.contactScope = contactScope;
         this.appointmentScope = appointmentScope;
+    }
+
+    public TestDataFactory(Integer contactScope, Integer appointmentScope, Integer deliveryActivityScope) {
+        this.contactScope = contactScope;
+        this.appointmentScope = appointmentScope;
+        this.deliveryActivityScope = deliveryActivityScope;
     }
 
     private UnitOfWork uow = new UnitOfWork(new List<SObjectType>{
@@ -132,47 +139,46 @@ public with sharing class TestDataFactory {
         this.uow.registerRelationship(serviceAgreement, maica_cc__Service_Agreement__c.maica_cc__Service_Provider__c, serviceProvider);
         this.uow.registerRelationship(serviceAgreement, maica_cc__Service_Agreement__c.maica_cc__Participant__c, contactVar);
 
+        maica_cc__Invoice__c invoiceVar = this.createInvoice(fundingVar.Funding_Type__c);
+        this.uow.registerNew(invoiceVar);
+        this.uow.registerRelationship(invoiceVar, maica_cc__Invoice__c.maica_cc__Provider__c, serviceProvider);
+        this.uow.registerRelationship(invoiceVar, maica_cc__Invoice__c.maica_cc__Participant__c, contactVar);
+
+        maica_cc__Support_Item__c supportItem = this.createSupportItem(fundingVar);
+        this.uow.registerNew(supportItem);
+        maica_cc__Appointment_Service__c appointmentServiceVar = this.createAppointmentService();
+        this.uow.registerNew(appointmentServiceVar);
+        this.uow.registerRelationship(supportItem, maica_cc__Support_Item__c.maica_cc__Appointment_Service__c, appointmentServiceVar);
+        this.uow.registerRelationship(supportItem, maica_cc__Support_Item__c.maica_cc__Support_Category__c, supportCategory);
+        if ('NDIS'.equalsIgnoreCase(fundingVar.maica_cc__Funding_Source__c)) {
+            this.uow.registerRelationship(supportItem, maica_cc__Support_Item__c.maica_cc__PACE_Support_Category__c, supportCategory);
+        }
 
         for (Integer j = 0; j < this.appointmentScope; j++) {
             maica_cc__Appointment__c appointmentVar = this.createAppointment(j);
             this.uow.registerNew(appointmentVar);
-            maica_cc__Appointment_Service__c appointmentServiceVar = this.createAppointmentService();
-            this.uow.registerNew(appointmentServiceVar);
-
-            maica_cc__Support_Item__c supportItem = this.createSupportItem(fundingVar);
-            this.uow.registerNew(supportItem);
-            this.uow.registerRelationship(supportItem, maica_cc__Support_Item__c.maica_cc__Appointment_Service__c, appointmentServiceVar);
-            this.uow.registerRelationship(supportItem, maica_cc__Support_Item__c.maica_cc__Support_Category__c, supportCategory);
-            if ('NDIS'.equalsIgnoreCase(fundingVar.maica_cc__Funding_Source__c)) {
-                this.uow.registerRelationship(supportItem, maica_cc__Support_Item__c.maica_cc__PACE_Support_Category__c, supportCategory);
-            }
-
             maica_cc__Agreement_Item__c agreementItem = this.createAgreementItem(fundingVar.Funding_Type__c, j);
             this.uow.registerNew(agreementItem);
             this.uow.registerRelationship(agreementItem, maica_cc__Agreement_Item__c.maica_cc__Service_Agreement__c, serviceAgreement);
             this.uow.registerRelationship(agreementItem, maica_cc__Agreement_Item__c.maica_cc__Support_Item__c, supportItem);
 
-            maica_cc__Invoice__c invoiceVar = this.createInvoice(fundingVar.Funding_Type__c);
-            this.uow.registerNew(invoiceVar);
-            this.uow.registerRelationship(invoiceVar, maica_cc__Invoice__c.maica_cc__Provider__c, serviceProvider);
-            this.uow.registerRelationship(invoiceVar, maica_cc__Invoice__c.maica_cc__Participant__c, contactVar);
+            for (Integer k = 0; k < this.deliveryActivityScope; k++) {
+                maica_cc__Delivery_Activity__c deliveryActivity = this.createDeliveryActivity();
+                this.uow.registerNew(deliveryActivity);
+                this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Agreement_Item__c, agreementItem);
+                this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Participant__c, contactVar);
+                this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Appointment__c, appointmentVar);
+                this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Appointment_Service__c, appointmentServiceVar);
+                this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Support_Item__c, supportItem);
+                this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.Reporting_Period__c, programPeriods[j]);
 
-
-            maica_cc__Delivery_Activity__c deliveryActivity = this.createDeliveryActivity();
-            this.uow.registerNew(deliveryActivity);
-            this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Agreement_Item__c, agreementItem);
-            this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Participant__c, contactVar);
-            this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Appointment__c, appointmentVar);
-            this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Appointment_Service__c, appointmentServiceVar);
-            this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.maica_cc__Support_Item__c, supportItem);
-            this.uow.registerRelationship(deliveryActivity, maica_cc__Delivery_Activity__c.Reporting_Period__c, programPeriods[j]);
-
-            maica_cc__Invoice_Line_Item__c iliVar = this.createInvoiceLineItem(agreementItem.maica_cc__Rate__c);
-            this.uow.registerNew(iliVar);
-            this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Invoice__c, invoiceVar);
-            this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Support_Item__c, supportItem);
-            this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Agreement_Item__c, agreementItem);
-            this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Delivery_Activity__c, deliveryActivity);
+                maica_cc__Invoice_Line_Item__c iliVar = this.createInvoiceLineItem(agreementItem.maica_cc__Rate__c);
+                this.uow.registerNew(iliVar);
+                this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Invoice__c, invoiceVar);
+                this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Support_Item__c, supportItem);
+                this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Agreement_Item__c, agreementItem);
+                this.uow.registerRelationship(iliVar, maica_cc__Invoice_Line_Item__c.maica_cc__Delivery_Activity__c, deliveryActivity);
+            }
         }
     }
 
@@ -303,21 +309,21 @@ public with sharing class TestDataFactory {
         return randStr;
     }
 
-    public static void deleteData() {
-        delete [SELECT Id FROM maica_cc__Invoice_Line_Item__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Delivery_Activity__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM Program_Period__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM Funding_Program__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Invoice__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Agreement_Item__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Support_Item__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Support_Category__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Appointment_Service__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Appointment__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Service_Agreement__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Funding__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM maica_cc__Price_List__c WHERE CreatedDate = TODAY];
-        delete [SELECT Id FROM Contact WHERE CreatedDate = TODAY];
+    public void deleteData() {
+        delete [SELECT Id FROM maica_cc__Invoice_Line_Item__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :(this.appointmentScope * this.deliveryActivityScope)];
+        delete [SELECT Id FROM maica_cc__Delivery_Activity__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :(this.appointmentScope * this.deliveryActivityScope)];
+        delete [SELECT Id FROM Program_Period__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.appointmentScope];
+        delete [SELECT Id FROM Funding_Program__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.appointmentScope];
+        delete [SELECT Id FROM maica_cc__Invoice__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.appointmentScope];
+        delete [SELECT Id FROM maica_cc__Agreement_Item__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.appointmentScope];
+        delete [SELECT Id FROM maica_cc__Support_Item__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.appointmentScope];
+        delete [SELECT Id FROM maica_cc__Support_Category__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC] ;
+        delete [SELECT Id FROM maica_cc__Appointment_Service__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC];
+        delete [SELECT Id FROM maica_cc__Appointment__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.appointmentScope];
+        delete [SELECT Id FROM maica_cc__Service_Agreement__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC];
+        delete [SELECT Id FROM maica_cc__Funding__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC];
+        delete [SELECT Id FROM maica_cc__Price_List__c WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC];
+        delete [SELECT Id FROM Contact WHERE CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT :this.contactScope];
     }
 
 }
